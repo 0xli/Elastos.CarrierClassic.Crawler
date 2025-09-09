@@ -281,6 +281,26 @@ static void crawler_connection_status(Tox *tox, TOX_CONNECTION status, void *use
     };
 
     vlogI("Crawler[%u] - connection status: %s", cwl->index, status_name[status]);
+    
+    // Print crawler's own NodeId and UserId when connected
+    if (status != TOX_CONNECTION_NONE) {
+        uint8_t public_key[TOX_PUBLIC_KEY_SIZE];
+        tox_self_get_public_key(tox, public_key);
+        
+        char nodeid_str[128];
+        size_t len = sizeof(nodeid_str);
+        base58_encode(public_key, TOX_PUBLIC_KEY_SIZE, nodeid_str, &len);
+        
+        vlogI("Crawler[%u] - My NodeId: %s", cwl->index, nodeid_str);
+        vlogI("Crawler[%u] - My UserId: %s", cwl->index, nodeid_str);
+        
+        // Get and print crawler's own IP address
+        IP_Port self_ip_port;
+        tox_self_get_udp_port(tox, &self_ip_port.port);
+        // Note: toxcore doesn't provide direct way to get self IP, 
+        // but we can get it from the connection status
+        vlogI("Crawler[%u] - My UDP Port: %d", cwl->index, self_ip_port.port);
+    }
 }
 
 /*
