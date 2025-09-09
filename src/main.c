@@ -296,7 +296,8 @@ static void crawler_connection_status(Tox *tox, TOX_CONNECTION status, void *use
         
         // Get and print crawler's own IP address
         IP_Port self_ip_port;
-        tox_self_get_udp_port(tox, &self_ip_port.port);
+        TOX_ERR_GET_PORT port_err;
+        self_ip_port.port = tox_self_get_udp_port(tox, &port_err);
         // Note: toxcore doesn't provide direct way to get self IP, 
         // but we can get it from the connection status
         vlogI("Crawler[%u] - My UDP Port: %d", cwl->index, self_ip_port.port);
@@ -324,7 +325,34 @@ static Crawler *crawler_new(void)
     }
     cwl->nodes_list_size = config->initial_nodes_list_size;
 
+    // Try to load existing savedata to keep same NodeId
+    char savedata_filename[PATH_MAX];
+    FILE *savedata_file;
+    uint8_t *savedata = NULL;
+    size_t savedata_len = 0;
+
+    snprintf(savedata_filename, sizeof(savedata_filename), "%s/savedata.tox", config->data_dir);
+    
+    savedata_file = fopen(savedata_filename, "rb");
+    if (savedata_file) {
+        fseek(savedata_file, 0, SEEK_END);
+        savedata_len = ftell(savedata_file);
+        fseek(savedata_file, 0, SEEK_SET);
+        
+        savedata = malloc(savedata_len);
+        if (savedata) {
+            fread(savedata, savedata_len, 1, savedata_file);
+        }
+        fclose(savedata_file);
+    }
+
     tox_options_default(&options);
+    if (savedata) {
+        options.savedata_type = TOX_SAVEDATA_TYPE_TOX_SAVE;
+        options.savedata_data = savedata;
+        options.savedata_length = savedata_len;
+    }
+    
     cwl->tox = tox_new(&options, &err);
     if (err != TOX_ERR_NEW_OK || cwl->tox == NULL) {
         vlogE("Controller - create new Tox instance for crawler failed: %d\n", err);
@@ -464,6 +492,24 @@ static int crawler_dump_nodes(Crawler *cwl)
 
 static void crawler_kill(Crawler *cwl)
 {
+    // Save crawler's data to keep same NodeId for next run
+    char savedata_filename[PATH_MAX];
+    FILE *savedata_file;
+    size_t savedata_len = tox_get_savedata_size(cwl->tox);
+    uint8_t *savedata = malloc(savedata_len);
+    
+    if (savedata) {
+        tox_get_savedata(cwl->tox, savedata);
+        
+        snprintf(savedata_filename, sizeof(savedata_filename), "%s/savedata.tox", config->data_dir);
+        savedata_file = fopen(savedata_filename, "wb");
+        if (savedata_file) {
+            fwrite(savedata, savedata_len, 1, savedata_file);
+            fclose(savedata_file);
+        }
+        free(savedata);
+    }
+    
     tox_kill(cwl->tox);
     free(cwl->nodes_list);
     free(cwl);
