@@ -2,4 +2,6 @@
 .idea
 tags
 /build
+test_savedata.c
+~/
 
