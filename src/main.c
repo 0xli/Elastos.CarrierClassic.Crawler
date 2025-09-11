@@ -231,7 +231,19 @@ static void getnodes_response_callback(IP_Port *ip_port, const uint8_t *public_k
         ip_ntoa(&ip_port->ip, ip_str, sizeof(ip_str));
         ip2location(ip_str, loc_str, sizeof(loc_str));
 
-        vlogV("Crawler[%u] - %s, %s, %s - %u", cwl->index, id_str, ip_str, loc_str, cwl->num_nodes);
+        vlogV("Crawler[%u] - ← Response: %s, %s, %s - %u", cwl->index, id_str, ip_str, loc_str, cwl->num_nodes);
+        
+        // Check if we found our own crawler or bootstrap nodes
+        uint8_t self_key[TOX_PUBLIC_KEY_SIZE];
+        tox_self_get_public_key(cwl->tox, self_key);
+        
+        char self_id_str[128];
+        size_t self_len = sizeof(self_id_str);
+        base58_encode(self_key, TOX_PUBLIC_KEY_SIZE, self_id_str, &self_len);
+        
+        if (strcmp(id_str, self_id_str) == 0) {
+            vlogV("Crawler[%u] - *** FOUND OUR OWN CRAWLER NODE ***: %s at %s", cwl->index, id_str, ip_str);
+        }
     }
 }
 
@@ -249,6 +261,16 @@ static size_t crawler_send_node_requests(Crawler *cwl)
 
     for (i = cwl->send_ptr; count < config->requests_per_interval && i < cwl->num_nodes; ++i) {
         size_t j = 0;
+
+        // Log which node we're sending getnodes request to
+        if (config->log_level >= VLOG_VERBOSE) {
+            char target_id[128];
+            char target_ip[IP_NTOA_LEN];
+            size_t len = sizeof(target_id);
+            base58_encode(cwl->nodes_list[i].public_key, TOX_PUBLIC_KEY_SIZE, target_id, &len);
+            ip_ntoa(&cwl->nodes_list[i].ip_port.ip, target_ip, sizeof(target_ip));
+            vlogV("Crawler[%u] - → Sending getnodes request to: %s (%s)", cwl->index, target_id, target_ip);
+        }
 
         DHT_getnodes(cwl->dht, &cwl->nodes_list[i].ip_port,
                      cwl->nodes_list[i].public_key,
