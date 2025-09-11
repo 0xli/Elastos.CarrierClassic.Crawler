@@ -48,6 +48,9 @@ typedef struct {
 
     char *database;
 
+    uint16_t start_port; /* UDP port range start */
+    uint16_t end_port;   /* UDP port range end */
+
     uint32_t bootstraps_size;
     bootstrap_node *bootstraps;
 } crawler_config;

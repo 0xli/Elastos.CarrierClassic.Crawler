@@ -27,5 +27,6 @@ ExternalProject_Add(
         -DDHT_BOOTSTRAP=OFF
         -DBUILD_CARRIER=ON
         -DBOOTSTRAP_DAEMON=OFF
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
         ${CMAKE_ARGS_INIT}
 )

@@ -163,6 +163,12 @@ crawler_config *load_config(const char *config_file)
     config->requests_per_interval = REQUESTS_PER_INTERVAL;
     config->random_requests = RANDOM_REQUESTS;
 
+    // Set default port range (same as Tox default: 33445-33545)
+    config->start_port = 33445;
+    config->end_port = 33545;
+    config_lookup_int(&cfg, "start_port", (int *)&config->start_port);
+    config_lookup_int(&cfg, "end_port", (int *)&config->end_port);
+
     rc = config_lookup_string(&cfg, "data_dir", &stropt);
     if (!rc || !*stropt) {
         fprintf(stderr, "Missing data dir option.\n");

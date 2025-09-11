@@ -347,6 +347,11 @@ static Crawler *crawler_new(void)
     }
 
     tox_options_default(&options);
+    
+    // Set port range from config to avoid conflicts with other Tox instances
+    options.start_port = config->start_port;
+    options.end_port = config->end_port;
+    
     if (savedata) {
         options.savedata_type = TOX_SAVEDATA_TYPE_TOX_SAVE;
         options.savedata_data = savedata;
